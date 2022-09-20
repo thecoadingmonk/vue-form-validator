@@ -1,32 +1,48 @@
-<script setup lang="ts">
-// This starter template is using Vue 3 <script setup> SFCs
-// Check out https://vuejs.org/api/sfc-script-setup.html#script-setup
-import HelloWorld from './components/HelloWorld.vue'
-</script>
-
 <template>
-  <div>
-    <a href="https://vitejs.dev" target="_blank">
-      <img src="/vite.svg" class="logo" alt="Vite logo" />
-    </a>
-    <a href="https://vuejs.org/" target="_blank">
-      <img src="./assets/vue.svg" class="logo vue" alt="Vue logo" />
-    </a>
-  </div>
-  <HelloWorld msg="Vite + Vue" />
+  <Form @on-submit="onSubmit" @on-error="onError" :config="FORM_CONFIG"/>
 </template>
 
-<style scoped>
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.vue:hover {
-  filter: drop-shadow(0 0 2em #42b883aa);
-}
-
-</style>
+<script lang="ts">
+  import { defineComponent } from 'vue';
+  import Form from './components/Form.vue'
+  
+  export default defineComponent({
+    methods: {
+      onSubmit: (data: Object) => {
+        console.log('submit has been called', data);
+      },
+      onError: (data: Object) => {
+        console.log('Form has error', data)
+      }
+    },
+    components: {
+      Form
+    },
+    data: () => {
+      return {
+        FORM_CONFIG: {
+          name: {
+            required: {
+              value: true,
+              message: 'Name is required'
+            },
+            minLength: {
+              value: 10,
+              message: 'Name should be at least have 10 characters'
+            },
+            maxLength: {
+              value: 100,
+              message: 'Name cannot exceed 100 characters'
+            },
+            validate: (value: string) => {
+              if (value) {
+                return true
+              }
+              return 'Name cannot be empty'
+            }
+          }
+        }
+      }
+    }
+  })
+  </script>
