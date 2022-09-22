@@ -46,3 +46,7 @@ export interface FormState {
         isTouched: boolean
     }
 }
+
+export interface GetFormStateReturnType {
+    [key: string]: FormState & FormValues
+}

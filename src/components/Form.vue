@@ -20,7 +20,7 @@
 
 <script lang="ts">
 import {  defineComponent, PropType } from "vue";
-import { Props, FormValues, FormState, Config, Options } from '../types/form';
+import { Props, FormValues, FormState, Config, Options, GetFormStateReturnType } from '../types/form';
 
 export default defineComponent({
     data: () => {
@@ -167,7 +167,7 @@ export default defineComponent({
                     }
             }
         },
-        getFormState() {
+        getFormState(): GetFormStateReturnType {
             const state = Object.create({})
             for(const [key, value] of Object.entries(this.formValues)){
                 state[key] = {
