@@ -2,7 +2,7 @@
   <Form @on-submit="onSubmit" @on-error="onError" :config="FORM_CONFIG" :options="options" ref="form">
     <template #name="{key, field, error, on}">
       <label :for="key">{{key}}</label>
-      <input type="text" :name="key" :ref="key" :id="key" v-model="field.value" v-on="on" disabled/>
+      <input type="text" :name="key" :ref="key" :id="key" v-model="field.value" v-on="on"/>
       <p>{{error}}</p>
     </template>
 

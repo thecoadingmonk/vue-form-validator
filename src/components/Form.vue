@@ -24,6 +24,7 @@ export default defineComponent({
     data: () => {
         return {
             formValues: {},
+            formState: {}
         }
     },
     props: {
@@ -78,8 +79,8 @@ export default defineComponent({
             }
         },
         setTouched(key: string) {
-            this.formValues[key] = {
-                ...this.formValues[key],
+            this.formState[key] = {
+                ...this.formState[key],
                 isTouched: true,
             }
             if(this.config[key].validateOn === 'focus') {
@@ -90,8 +91,8 @@ export default defineComponent({
             }
         },
         setInput(key: string) {
-            this.formValues[key] = {
-                ...this.formValues[key],
+            this.formState[key] = {
+                ...this.formState[key],
                 isDirty: true,
             }
             if(this.config[key].validateOn === 'change') {
@@ -164,7 +165,14 @@ export default defineComponent({
             }
         },
         getFormState() {
-            return this.formValues
+            const state = Object.create({})
+            for(const [key, value] of Object.entries(this.formValues)){
+                state[key] = {
+                    ...(value ?? {}),
+                    ...(this.formState[key] ?? {}),
+                }
+            }
+            return state
         }
     },
 })
