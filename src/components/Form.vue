@@ -19,35 +19,38 @@
 </template>
 
 <script lang="ts">
-import {  defineComponent } from "vue";
+import {  defineComponent, PropType } from "vue";
+import { Props, FormValues, FormState, Config, Options } from '../types/form';
+
 export default defineComponent({
     data: () => {
         return {
-            formValues: {},
-            formState: {}
+            formValues: {} as FormValues,
+            formState: {} as FormState
         }
     },
     props: {
         config: {
-            type: Object,
+            type: Object as PropType<Config>,
             default: () => ({})
         },
         options: {
-            type: Object,
+            type: Object as PropType<Options>,
             default: () => ({})
         },
         ref: {
-            type: String,
+            type: String as PropType<Props['ref']>,
             default:'form'
         }
     },
     created() {
         for(const [key] of Object.entries(this.config)) {
-            this.formValues = {
-                ...this.formValues,
-                [key]: {
-                    value: this.options[key]?.defaultValue ?? ''
-                }
+            this.formValues[key] = {
+                    value: this.options[key]?.defaultValue ?? '',
+            }
+            this.formState[key] = {
+                    isDirty: false,
+                    isTouched: false,
             }
         }
     },
@@ -102,7 +105,7 @@ export default defineComponent({
                 }
             }
         },
-        validator({  value, key }){
+        validator({  value, key }: {value: string, key: string}){
             const validations = this.config[key];
             if((this.$refs[this.ref][key].disabled && validations?.validateOnDisabled) || !this.$refs[this.ref][key].disabled) {
                 if (validations?.required?.value && (value === '' || value === null || value === undefined)) {
@@ -142,7 +145,7 @@ export default defineComponent({
                         return {
                             value: value,
                             error: {
-                                message: isValidInput,
+                                message: typeof isValidInput === 'string' ? isValidInput : undefined,
                                 hasError: true
                             }
                         }

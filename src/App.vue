@@ -1,5 +1,5 @@
 <template>
-  <Form @on-submit="onSubmit" @on-error="onError" :config="FORM_CONFIG" :options="options" ref="form">
+  <Form @on-submit="onSubmit" @on-error="onError" :config="FORM_CONFIG" :options="options" :ref="formRef">
     <template #name="{key, field, error, on}">
       <label :for="key">{{key}}</label>
       <input type="text" :name="key" :ref="key" :id="key" v-model="field.value" v-on="on"/>
@@ -20,9 +20,10 @@
 </template>
 
 <script lang="ts">
-  import { defineComponent } from 'vue';
-  import Form from './components/Form.vue'
-  
+  import { defineComponent, ref } from 'vue';
+  import Form from './components/Form.vue';
+  import type {Config} from './types/form';
+
   export default defineComponent({
     methods: {
       onSubmit: (data: Object) => {
@@ -31,8 +32,8 @@
       onError: (data: Object) => {
         console.log('Form has error', data)
       },
-      getFormState() {
-        console.log(this.$refs.form.getFormState())
+      getFormState () {
+        console.log(this.$refs[this.formRef].getFormState())
       }
     },
     components: {
@@ -60,20 +61,21 @@
               }
               return 'Name cannot be empty'
             },
-            validateOn: 'change',
             validateOnDisabled: true,
           },
           password: {
             required: {
-              value: true
+              value: true,
+              message: 'Password is Required'
             }
           }
-        },
+        } as Config,
         options: {
           name: {
             defaultValue: 'Samartha Hegde',
           }
-        }
+        },
+        formRef: ref('form')
       }
     }
   })
