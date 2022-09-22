@@ -1,5 +1,22 @@
 <template>
-  <Form @on-submit="onSubmit" @on-error="onError" :config="FORM_CONFIG"/>
+  <Form @on-submit="onSubmit" @on-error="onError" :config="FORM_CONFIG" :options="options" ref="form">
+    <template #name="{key, field, error, on}">
+      <label :for="key">{{key}}</label>
+      <input type="text" :name="key" :ref="key" :id="key" v-model="field.value" v-on="on" disabled/>
+      <p>{{error}}</p>
+    </template>
+
+    <template #password="{key, field, error, on}">
+      <label :for="key">{{key}}</label>
+      <input type="text" :name="key" :ref="key" :id="key" v-model="field.value" v-on="on"/>
+      <p>{{error}}</p>
+    </template>
+
+    <template #submit="{submit}">
+      <button type="submit" @click="submit">Submit from parent</button>
+    </template>
+  </Form>
+  <button type="button" @click="getFormState">Get form state</button>
 </template>
 
 <script lang="ts">
@@ -13,6 +30,9 @@
       },
       onError: (data: Object) => {
         console.log('Form has error', data)
+      },
+      getFormState() {
+        console.log(this.$refs.form.getFormState())
       }
     },
     components: {
@@ -39,7 +59,19 @@
                 return true
               }
               return 'Name cannot be empty'
+            },
+            validateOn: 'change',
+            validateOnDisabled: true,
+          },
+          password: {
+            required: {
+              value: true
             }
+          }
+        },
+        options: {
+          name: {
+            defaultValue: 'Samartha Hegde',
           }
         }
       }
