@@ -62,6 +62,7 @@
               return 'Name cannot be empty'
             },
             validateOnDisabled: true,
+            defaultValue: 'Samartha Hegde'
           },
           password: {
             required: {
@@ -71,9 +72,10 @@
           }
         } as Config,
         options: {
-          name: {
-            defaultValue: 'Samartha Hegde',
-          }
+          persist: false,
+          alert: true,
+          alertMessage: 'Changes you made may not be saved',
+          localStorageKey: 'new-form'
         },
         formRef: ref('form')
       }

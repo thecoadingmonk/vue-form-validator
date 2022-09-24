@@ -20,13 +20,15 @@
 
 <script lang="ts">
 import {  defineComponent, PropType } from "vue";
-import { Props, FormValues, FormState, Config, Options, GetFormStateReturnType } from '../types/form';
+import { Props, FormValues, FormState, Config, Options, StoredValues } from '../types/form';
 
 export default defineComponent({
     data: () => {
         return {
             formValues: {} as FormValues,
-            formState: {} as FormState
+            formState: {
+                isSubmitted: false,
+            } as FormState
         }
     },
     props: {
@@ -45,13 +47,27 @@ export default defineComponent({
     },
     created() {
         for(const [key] of Object.entries(this.config)) {
-            this.formValues[key] = {
-                    value: this.options[key]?.defaultValue ?? '',
+            this.formValues = {
+                ...this.formValues,
+                [key]: {
+                    value: this.config[key].defaultValue ?? '',
+                }
             }
-            this.formState[key] = {
+            this.formState.fields = { 
+                ...this.formState.fields,
+                [key]: {
                     isDirty: false,
                     isTouched: false,
+                }
             }
+        }
+
+        if (this.options.persist) {
+            this.restore()
+        }
+
+        if (this.options.alert && !this.options.persist) {
+            window.addEventListener('beforeunload', this.handleReload, { capture: true })
         }
     },
     emits: ['on-submit', 'on-error'],
@@ -74,16 +90,22 @@ export default defineComponent({
                 }
                 const hasError = Object.keys(formData).find((key) => formData[key].error.hasError === true)
                 this.formValues = formData;
+                this.formState.isSubmitted = true;
+
                 if(hasError) {
                     this.$emit('on-error', formData);
                 } else {
                     this.$emit('on-submit', formData);
                 }
+
+                if(this.options.persist) {
+                    this.store()
+                }
             }
         },
         setTouched(key: string) {
-            this.formState[key] = {
-                ...this.formState[key],
+            this.formState.fields[key] = {
+                ...(this.formState.fields[key] ?? {}),
                 isTouched: true,
             }
             if(this.config[key].validateOn === 'focus') {
@@ -94,20 +116,25 @@ export default defineComponent({
             }
         },
         setInput(key: string) {
-            this.formState[key] = {
-                ...this.formState[key],
+            this.formState.fields[key] = {
+                ...(this.formState.fields[key] ?? {}),
                 isDirty: true,
             }
+            
             if(this.config[key].validateOn === 'change') {
                 this.formValues[key] = {
                     ...this.formValues[key],
                     ...this.validator({value: this.formValues[key].value, key })
                 }
             }
+
+            if(this.options.persist) {
+                this.store()
+            }
         },
         validator({  value, key }: {value: string, key: string}){
             const validations = this.config[key];
-            if((this.$refs[this.ref][key].disabled && validations?.validateOnDisabled) || !this.$refs[this.ref][key].disabled) {
+            if((this.$refs?.[this.ref]?.[key]?.disabled && validations?.validateOnDisabled) || !this.$refs?.[this.ref]?.[key]?.disabled) {
                 if (validations?.required?.value && (value === '' || value === null || value === undefined)) {
                     return {
                         value: value,
@@ -167,16 +194,50 @@ export default defineComponent({
                     }
             }
         },
-        getFormState(): GetFormStateReturnType {
+        getFormState(): StoredValues {
             const state = Object.create({})
-            for(const [key, value] of Object.entries(this.formValues)){
+            for(const [key, value] of Object.entries(this.formState.fields)){
                 state[key] = {
+                    ...(this.formValues[key] ?? {}),
                     ...(value ?? {}),
-                    ...(this.formState[key] ?? {}),
                 }
             }
-            return state
+            return {fields: state, isSubmitted: this.formState.isSubmitted}
+        },
+        store() {
+            const localStorageKey = this.options.localStorageKey ?? 'FORM_VALUES'
+            localStorage.setItem(localStorageKey, JSON.stringify(this.getFormState()))
+        },
+        restore() {
+            const localStorageKey = this.options.localStorageKey ?? 'FORM_VALUES' 
+            const storedValues: StoredValues = JSON.parse(localStorage.getItem(localStorageKey) ?? '{}')
+            const hasValue = Object.keys(storedValues).length
+            
+            if (hasValue) {
+                for(const [key, each] of Object.entries(storedValues)) {
+                    this.formValues[key] = {
+                        value: each.value,
+                        error: each.error
+                    }
+                    this.formState.fields[key] = {
+                        isDirty: each.isDirty,
+                        isTouched: each.isTouched
+                    }
+                }
+            }
+        },
+        handleReload(event: BeforeUnloadEvent) {
+            event.preventDefault();
+            const isFormDirty = !!Object.values(this.formState.fields).find(each => each.isDirty)
+
+            if (isFormDirty) {
+                return event.returnValue = this.options.alertMessage ?? 'Changes that you made may not be saved.'
+            }
+            return undefined
         }
     },
+    beforeUnmount() {
+        window.removeEventListener('beforeunload', this.handleReload, {capture: true})
+    }
 })
 </script>

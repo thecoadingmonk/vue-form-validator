@@ -12,6 +12,7 @@ export interface Validation {
     validate?: (value: string) => string | boolean
     validateOn?: 'focus' | 'change' | 'submit'
     validateOnDisabled?: boolean
+    defaultValue?: string
 }
 
 export interface Config{
@@ -19,9 +20,10 @@ export interface Config{
 }
 
 export interface Options {
-    [key: string]: {
-        defaultValue: string
-    }
+    persist?: boolean
+    alert?: boolean
+    alertMessage?: string
+    localStorageKey?: string
 }
 
 export interface Props {
@@ -41,12 +43,26 @@ export interface FormValues {
 }
 
 export interface FormState {
-    [key: string]: {
-        isDirty: boolean
-        isTouched: boolean
+    isSubmitted: boolean
+    fields: {
+        [key: string]: {
+            isDirty: boolean
+            isTouched: boolean
+        }
     }
 }
 
-export interface GetFormStateReturnType {
-    [key: string]: FormState & FormValues
+export interface StoredValues {
+    isSubmitted: boolean
+    fields: {
+        [key: string]: {
+            isDirty: boolean
+            isTouched: boolean
+            value: string
+            error: {
+                hasError: boolean
+                message?: string
+            }
+        } 
+    }
 }
