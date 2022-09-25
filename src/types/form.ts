@@ -16,6 +16,7 @@ export interface Validation {
     dynamic?: {
         initialElementCount: number
         value: true
+        defaultValue: string
     }
 }
 
@@ -53,7 +54,10 @@ export interface FormState {
             isDirty: boolean
             isTouched: boolean
         }
-    }
+    } | DynamicElements & {
+        isDirty: boolean
+        isTouched: boolean
+    }[]
 }
 
 export interface StoredValues {
@@ -67,7 +71,7 @@ export interface StoredValues {
                 hasError: boolean
                 message?: string
             }
-        } 
+        }
     }
 }
 

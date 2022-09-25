@@ -1,28 +1,28 @@
 <template>
   <Form @on-submit="onSubmit" @on-error="onError" :config="FORM_CONFIG" :options="options" :ref="formRef">
-    <template #name="{name, field, error, on}">
-      <label :for="name">{{name}}</label>
-      <input type="text" :name="name" :ref="name" :id="name" v-model="field.value" v-on="on" disabled/>
+    <template #name="{fieldKey, field, error, on}">
+      <label :for="fieldKey">{{fieldKey}}</label>
+      <input type="text" :name="fieldKey" :ref="fieldKey" :id="fieldKey" v-model="field.value" v-on="on" disabled/>
       <p>{{error}}</p>
     </template>
 
-    <template #password="{name, field, error, on}">
-      <label :for="name">{{name}}</label>
-      <input type="text" :name="name" :ref="name" :id="name" v-model="field.value" v-on="on"/>
+    <template #password="{fieldKey, field, error, on}">
+      <label :for="fieldKey">{{fieldKey}}</label>
+      <input type="text" :name="fieldKey" :ref="fieldKey" :id="fieldKey" v-model="field.value" v-on="on"/>
       <p>{{error}}</p>
     </template>
 
-    <template #range="{name, field, error, on}">
-      <label :for="name">{{name}}</label>
-      <input type="range" :name="name" :ref="name" :id="name" v-model="field.value" v-on="on"/>
+    <template #range="{fieldKey, field, error, on}">
+      <label :for="fieldKey">{{fieldKey}}</label>
+      <input type="range" :name="fieldKey" :ref="fieldKey" :id="fieldKey" v-model="field.value" v-on="on"/>
       <p>{{error}}</p>
     </template>
 
-    <template #emails="{name, field, error, on, elements}">
-      <label :for="name">{{name}}</label>
+    <template #emails="{fieldKey, field, error, on, elements}">
+      <label :for="fieldKey">{{fieldKey}}</label>
       <template v-for="(element) in elements" :key="element.key">
         <label :for="element.key">{{element.key}}</label>        
-        <input type="text" :name="name + element.key" :id="name + element.key" v-model="element.value" v-on:input="(e) => on?.input(e, element.key)"/>
+        <input type="text" :name="fieldKey + element.key" :id="fieldKey + element.key" v-model="element.value" v-on:input="(e) => on?.input(e, element.key)"/>
         <button @click="remove(element.key)">Remove</button>
         <p>{{element.error.message}}</p>
         <br />
@@ -42,6 +42,8 @@
   import { defineComponent, ref } from 'vue';
   import Form from './components/Form.vue';
   import type {Config} from './types/form';
+
+  const formRef = ref('form');
 
   export default defineComponent({
     methods: {
@@ -103,18 +105,19 @@
             },
             dynamic: {
               value: true, 
-              initialElementCount: 3
+              initialElementCount: 3,
+              defaultValue: 'new'
             },
             validateOn: 'change'
           }
         } as Config,
         options: {
-          persist: true,
+          persist: false,
           alert: true,
           alertMessage: 'Changes you made may not be saved',
           localStorageKey: 'new-form'
         },
-        formRef: ref('form')
+        formRef: formRef
       }
     }
   })

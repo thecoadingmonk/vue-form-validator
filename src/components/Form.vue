@@ -4,7 +4,8 @@
             <slot 
                 :name="key" 
                 :field="formValues[key]"  
-                :error="formValues[key].error?.message" 
+                :error="formValues[key].error?.message"
+                :fieldKey="key" 
                 :on="{
                     focus: (e, elementKey) => setTouched(e, key, elementKey),
                     input: (e, elementKey) => setInput(e, key, elementKey)
@@ -51,7 +52,7 @@ export default defineComponent({
             if (value.dynamic?.value) {
                 this.dynamicElements[key] = Array.from({ length: value.dynamic.initialElementCount }, (_, i) => ({
                     key: i + 1,
-                    value: '',
+                    value: value.dynamic?.defaultValue ?? '',
                     error: {
                         hasError: false
                     }
@@ -238,6 +239,7 @@ export default defineComponent({
         },
         validator({  value, key }: {value: string, key: string}){
             const validations = this.config[key];
+            console.log(this.$refs?.[this.ref]?.[key]?.disabled)
             if((this.$refs?.[this.ref]?.[key]?.disabled && validations?.validateOnDisabled) || !this.$refs?.[this.ref]?.[key]?.disabled) {
                 if (validations?.required?.value && (value === '' || value === null || value === undefined)) {
                     return {
@@ -306,7 +308,7 @@ export default defineComponent({
                     } else {
                         state[key] = {
                         ...(this.formValues[key] ?? {}),
-                        ...(value ?? {}),
+                        ...(value && typeof value === 'object' ? value : {}),
                     } 
                 }   
             }
@@ -340,7 +342,12 @@ export default defineComponent({
         },
         handleReload(event: BeforeUnloadEvent) {
             event.preventDefault();
-            const isFormDirty = !!Object.values(this.formState.fields).find(each => each.isDirty)
+            const isFormDirty = !!Object.values(this.formState.fields).find(each => {
+                if (Array.isArray(each)) {
+                    return !!each.find(i => i.isDirty)
+                }
+                return each.isDirty
+            })
 
             if (isFormDirty) {
                 return event.returnValue = this.options.alertMessage ?? 'Changes that you made may not be saved.'
@@ -351,7 +358,7 @@ export default defineComponent({
             const nextKey = this.dynamicElements[key][this.dynamicElements[key].length - 1].key + 1
             this.dynamicElements[key].push({
                         key: nextKey,
-                        value: '',
+                        value: this.config[key].dynamic?.defaultValue ?? '',
                         error: {
                             hasError: false
                         }
