@@ -1,17 +1,17 @@
 <template>
-    <form :ref="ref">
-        <div v-for="[key] of Object.entries(config)" :key="key">
+    <form action="" :ref="ref">
+        <template v-for="[key, each] of Object.entries(config)" :key="key">
             <slot 
                 :name="key" 
-                :field="formValues[key]" 
-                :key="key" 
+                :field="formValues[key]"  
                 :error="formValues[key].error?.message" 
                 :on="{
-                    focus: () => setTouched(key),
-                    input: () => setInput(key)
+                    focus: (e, elementKey) => setTouched(e, key, elementKey),
+                    input: (e, elementKey) => setInput(e, key, elementKey)
                 }"
+                :elements="each.dynamic?.value ? dynamicElements[key] : undefined"
             />
-        </div>
+        </template>
         <slot name="submit" :submit="submit">
             <button type="submit" @click="submit">Submit</button>
         </slot>
@@ -20,7 +20,7 @@
 
 <script lang="ts">
 import {  defineComponent, PropType } from "vue";
-import { Props, FormValues, FormState, Config, Options, StoredValues } from '../types/form';
+import { Props, FormValues, FormState, Config, Options, StoredValues, DynamicElements } from '../types/form';
 
 export default defineComponent({
     data: () => {
@@ -28,7 +28,8 @@ export default defineComponent({
             formValues: {} as FormValues,
             formState: {
                 isSubmitted: false,
-            } as FormState
+            } as FormState,
+            dynamicElements: {} as DynamicElements
         }
     },
     props: {
@@ -46,18 +47,45 @@ export default defineComponent({
         }
     },
     created() {
-        for(const [key] of Object.entries(this.config)) {
-            this.formValues = {
-                ...this.formValues,
-                [key]: {
-                    value: this.config[key].defaultValue ?? '',
+        for(const [key, value] of Object.entries(this.config)) {
+            if (value.dynamic?.value) {
+                this.dynamicElements[key] = Array.from({ length: value.dynamic.initialElementCount }, (_, i) => ({
+                    key: i + 1,
+                    value: '',
+                    error: {
+                        hasError: false
+                    }
+                }))
+                
+                this.formValues = {
+                    ...this.formValues,
+                    [key]: this.dynamicElements[key]
                 }
-            }
-            this.formState.fields = { 
-                ...this.formState.fields,
-                [key]: {
-                    isDirty: false,
-                    isTouched: false,
+
+                this.formState.fields = {
+                    ...this.formState.fields,
+                    [key]: this.dynamicElements[key].map(each => ({
+                        ...each,
+                        isDirty: false,
+                        isTouched: false,
+                    }))
+                }
+            } else {
+                this.formValues = {
+                    ...this.formValues,
+                    [key]: {
+                        value: this.config[key].defaultValue ?? '',
+                        error: {
+                            hasError: false,
+                        }
+                    }
+                }
+                this.formState.fields = { 
+                    ...this.formState.fields,
+                    [key]: {
+                        isDirty: false,
+                        isTouched: false,
+                    }
                 }
             }
         }
@@ -79,16 +107,36 @@ export default defineComponent({
                 const formData = Object.create({})
                 for (const [key, each] of Object.entries(this.formValues)) {
                     formData[key] = {
-                        value: each.value 
+                        value: each.value, 
+                        error: {
+                            hasError: false
+                        }
                     }
                 }
                 this.$emit('on-submit', formData);
             } else {
                 const formData = Object.create(this.formValues)
+                let dynamicElementHasError = false;
+                
                 for (const [key, each] of Object.entries(this.formValues)) {
-                    formData[key] = this.validator({ key, value: each.value })
+                    
+                    if(this.config[key].dynamic?.value) {
+                        this.dynamicElements[key] = this.dynamicElements[key].map(each => {
+                            const result = this.validator({value: each.value, key})
+                            
+                            if (!dynamicElementHasError && result.error.hasError) {
+                                dynamicElementHasError = true
+                            }
+
+                            return { ...each, error: {hasError: result.error.hasError, message: result.error.message }}
+                        })
+                        formData[key] = this.dynamicElements[key]
+                    } else {
+                        formData[key] = this.validator({ key, value: each.value }) 
+                    }
                 }
-                const hasError = Object.keys(formData).find((key) => formData[key].error.hasError === true)
+                
+                const  hasError = !!Object.keys(formData).find((key) => formData[key].error?.hasError === true) || dynamicElementHasError
                 this.formValues = formData;
                 this.formState.isSubmitted = true;
 
@@ -103,28 +151,84 @@ export default defineComponent({
                 }
             }
         },
-        setTouched(key: string) {
-            this.formState.fields[key] = {
-                ...(this.formState.fields[key] ?? {}),
-                isTouched: true,
-            }
-            if(this.config[key].validateOn === 'focus') {
-                this.formValues[key] = {
-                    ...this.formValues[key],
-                    ...this.validator({value: this.formValues[key].value, key })
+        setTouched(e: FocusEvent, key: string, elementKey?: number) {
+            if(this.config[key].dynamic?.value) {
+                this.formState.fields[key] = this.dynamicElements[key].map(each => {
+                    if(each.key === elementKey) {
+                        return {
+                            ...each,
+                            isTouched: true,
+                        }
+                    }
+                    return each
+                })
+
+                if(this.config[key].validateOn === 'focus') {
+                    this.dynamicElements[key] = this.dynamicElements[key].map(each => {
+                        if(each.key === elementKey) {
+                            const result = this.validator({value: each.value, key })
+                            return {
+                                ...each,
+                                error: {
+                                    hasError: result.error.hasError,
+                                    message: result.error.message
+                                }
+                            }
+                        }
+                        return each
+                    })
                 }
-            }
+            } else {
+                this.formState.fields[key] = {
+                    ...(this.formState.fields[key] ?? {}),
+                    isTouched: true,
+                }
+                if(this.config[key].validateOn === 'focus') {
+                    this.formValues[key] = {
+                        ...this.formValues[key],
+                        ...this.validator({value: this.formValues[key].value, key })
+                    }
+                }
+        }
         },
-        setInput(key: string) {
-            this.formState.fields[key] = {
-                ...(this.formState.fields[key] ?? {}),
-                isDirty: true,
-            }
-            
-            if(this.config[key].validateOn === 'change') {
-                this.formValues[key] = {
-                    ...this.formValues[key],
-                    ...this.validator({value: this.formValues[key].value, key })
+        setInput(e: InputEvent, key: string, elementKey?:number) {
+            if(this.config[key].dynamic?.value) {
+                this.formState.fields[key] = this.dynamicElements[key].map(each => {
+                    if(each.key === elementKey) {
+                        return {
+                            ...each,
+                            isDirty: true,
+                        }
+                    }
+                    return each
+                })
+
+                if(this.config[key].validateOn === 'change') {
+                    this.dynamicElements[key] = this.dynamicElements[key].map(each => {
+                        if(each.key === elementKey) {
+                            const result = this.validator({value: each.value, key })
+                            return {
+                                ...each,
+                                error: {
+                                    hasError: result.error.hasError,
+                                    message: result.error.message
+                                }
+                            }
+                        }
+                        return each
+                    })
+                }
+            } else {
+                this.formState.fields[key] = {
+                    ...(this.formState.fields[key] ?? {}),
+                    isDirty: true,
+                }
+                
+                if(this.config[key].validateOn === 'change') {
+                    this.formValues[key] = {
+                        ...this.formValues[key],
+                        ...this.validator({value: this.formValues[key].value, key })
+                    }
                 }
             }
 
@@ -197,10 +301,14 @@ export default defineComponent({
         getFormState(): StoredValues {
             const state = Object.create({})
             for(const [key, value] of Object.entries(this.formState.fields)){
-                state[key] = {
-                    ...(this.formValues[key] ?? {}),
-                    ...(value ?? {}),
-                }
+                    if(this.config[key].dynamic?.value) {
+                        state[key] = value
+                    } else {
+                        state[key] = {
+                        ...(this.formValues[key] ?? {}),
+                        ...(value ?? {}),
+                    } 
+                }   
             }
             return {fields: state, isSubmitted: this.formState.isSubmitted}
         },
@@ -214,14 +322,18 @@ export default defineComponent({
             const hasValue = Object.keys(storedValues).length
             
             if (hasValue) {
-                for(const [key, each] of Object.entries(storedValues)) {
-                    this.formValues[key] = {
-                        value: each.value,
-                        error: each.error
-                    }
-                    this.formState.fields[key] = {
-                        isDirty: each.isDirty,
-                        isTouched: each.isTouched
+                for(const [key, each] of Object.entries(storedValues.fields)) {
+                    if (this.config[key]?.dynamic?.value) {
+                        this.dynamicElements[key] = each
+                    } else {                       
+                        this.formValues[key] = {
+                            value: each.value,
+                            error: each.error
+                        }
+                        this.formState.fields[key] = {
+                            isDirty: each.isDirty,
+                            isTouched: each.isTouched
+                        }
                     }
                 }
             }
@@ -234,6 +346,23 @@ export default defineComponent({
                 return event.returnValue = this.options.alertMessage ?? 'Changes that you made may not be saved.'
             }
             return undefined
+        },
+        append(key: string) {
+            const nextKey = this.dynamicElements[key][this.dynamicElements[key].length - 1].key + 1
+            this.dynamicElements[key].push({
+                        key: nextKey,
+                        value: '',
+                        error: {
+                            hasError: false
+                        }
+            })
+        },
+        remove(key:string, index: number) {
+            const filteredItems = this.dynamicElements[key].filter(each => each.key !== index)
+            this.dynamicElements = {
+                ...this.dynamicElements,
+                [key]: filteredItems
+            }
         }
     },
     beforeUnmount() {

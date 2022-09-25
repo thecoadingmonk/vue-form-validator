@@ -1,14 +1,32 @@
 <template>
   <Form @on-submit="onSubmit" @on-error="onError" :config="FORM_CONFIG" :options="options" :ref="formRef">
-    <template #name="{key, field, error, on}">
-      <label :for="key">{{key}}</label>
-      <input type="text" :name="key" :ref="key" :id="key" v-model="field.value" v-on="on"/>
+    <template #name="{name, field, error, on}">
+      <label :for="name">{{name}}</label>
+      <input type="text" :name="name" :ref="name" :id="name" v-model="field.value" v-on="on" disabled/>
       <p>{{error}}</p>
     </template>
 
-    <template #password="{key, field, error, on}">
-      <label :for="key">{{key}}</label>
-      <input type="text" :name="key" :ref="key" :id="key" v-model="field.value" v-on="on"/>
+    <template #password="{name, field, error, on}">
+      <label :for="name">{{name}}</label>
+      <input type="text" :name="name" :ref="name" :id="name" v-model="field.value" v-on="on"/>
+      <p>{{error}}</p>
+    </template>
+
+    <template #range="{name, field, error, on}">
+      <label :for="name">{{name}}</label>
+      <input type="range" :name="name" :ref="name" :id="name" v-model="field.value" v-on="on"/>
+      <p>{{error}}</p>
+    </template>
+
+    <template #emails="{name, field, error, on, elements}">
+      <label :for="name">{{name}}</label>
+      <template v-for="(element) in elements" :key="element.key">
+        <label :for="element.key">{{element.key}}</label>        
+        <input type="text" :name="name + element.key" :id="name + element.key" v-model="element.value" v-on:input="(e) => on?.input(e, element.key)"/>
+        <button @click="remove(element.key)">Remove</button>
+        <p>{{element.error.message}}</p>
+        <br />
+      </template>
       <p>{{error}}</p>
     </template>
 
@@ -17,6 +35,7 @@
     </template>
   </Form>
   <button type="button" @click="getFormState">Get form state</button>
+  <button type="button" @click="append">append</button>
 </template>
 
 <script lang="ts">
@@ -34,6 +53,12 @@
       },
       getFormState () {
         console.log(this.$refs[this.formRef].getFormState())
+      },
+      append () {
+        this.$refs[this.formRef].append('emails')
+      },
+      remove (index: number) {
+        this.$refs[this.formRef].remove('emails', index)
       }
     },
     components: {
@@ -69,10 +94,22 @@
               value: true,
               message: 'Password is Required'
             }
+          },
+          range: {},
+          emails: {
+            minLength: {
+              value: 5,
+              message: 'Name should be at least have 5 characters'
+            },
+            dynamic: {
+              value: true, 
+              initialElementCount: 3
+            },
+            validateOn: 'change'
           }
         } as Config,
         options: {
-          persist: false,
+          persist: true,
           alert: true,
           alertMessage: 'Changes you made may not be saved',
           localStorageKey: 'new-form'

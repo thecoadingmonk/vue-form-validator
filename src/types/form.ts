@@ -13,6 +13,10 @@ export interface Validation {
     validateOn?: 'focus' | 'change' | 'submit'
     validateOnDisabled?: boolean
     defaultValue?: string
+    dynamic?: {
+        initialElementCount: number
+        value: true
+    }
 }
 
 export interface Config{
@@ -65,4 +69,15 @@ export interface StoredValues {
             }
         } 
     }
+}
+
+export interface DynamicElements {
+    [key: string]: {
+        key: number
+        value: string
+        error: {
+            hasError: boolean
+            message?: string
+        }
+    }[]
 }
